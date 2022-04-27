@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/integrii/flaggy"
 	"github.com/jszwec/csvutil"
 
@@ -17,23 +18,30 @@ import (
 var (
 	inputCsvFile                  = ""
 	outputIFCFile                 = "out.ifc"
+	emptyPset2Common              bool
+	psetPresent                   bool
 	version, gitCommit, gitBranch string
 )
 
 type CsvRecord struct {
-	X     string `csv:"x"`
-	Y     string `csv:"y"`
-	Z     string `csv:"z"`
-	Name  string `csv:"name,omitempty"`
-	IType string `csv:"type,omitempty"`
-	Descr string `csv:"description,omitempty"`
-	Tag   string `csv:"tag,omitempty"`
+	X         string                    `csv:"x"`
+	Y         string                    `csv:"y"`
+	Z         string                    `csv:"z"`
+	Name      string                    `csv:"name,omitempty"`
+	IType     string                    `csv:"type,omitempty"`
+	Descr     string                    `csv:"description,omitempty"`
+	Tag       string                    `csv:"tag,omitempty"`
+	OtherData map[string]map[string]int `csv:"-"`
 }
 
 func main() {
 	// Add a flag
 	flaggy.String(&inputCsvFile, "c", "csv", "Input csv file")
 	flaggy.String(&outputIFCFile, "o", "out", "Output ifc file")
+	flaggy.Bool(&psetPresent, "p", "pset", `If flag setted then second line of CSV file interpret as Pset name, property in first line
+	           except required and optional fields (x,y,z,name,type,description,tag)`)
+	flaggy.Bool(&emptyPset2Common, "e", "empty", `Work with setted pset flag, create pset 'Pset_Common' for all not empty fields in header,
+	           except required and optional fields (x,y,z,name,type,description,tag)`)
 	flaggy.SetVersion(version)
 
 	// Parse the flag
@@ -81,15 +89,13 @@ func main() {
 	}
 
 	//read csv line and write to ifc file
-	csvReader := csv.NewReader(csvFile)
-
 	var csvHeader []string //empty csvHeader for csvutils -> csvutils use first line as header
 	var count int32
 	var b []byte
 	var recordStruct CsvRecord
 	var shapes []string
-	count = 100
 
+	csvReader := csv.NewReader(csvFile)
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)
@@ -101,12 +107,37 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = dec.Decode(&recordStruct)
-	if err != nil {
-		log.Fatal("Csv decoder error: ", err)
-		os.Exit(1)
+	//read second string if present -p flag
+	if psetPresent {
+		recordStruct.OtherData = make(map[string]map[string]int)
+		err = dec.Decode(&recordStruct)
+		header := dec.Header()
+		if err != nil {
+			log.Fatal("Csv decoder error: ", err)
+			os.Exit(1)
+		}
+		for _, i := range dec.Unused() {
+			if (header[i] != "") && (dec.Record()[i] != "") {
+				if recordStruct.OtherData[dec.Record()[i]] == nil {
+					recordStruct.OtherData[dec.Record()[i]] = make(map[string]int)
+				}
+				recordStruct.OtherData[dec.Record()[i]][header[i]] = i
+			}
+			if (header[i] != "") && (emptyPset2Common) {
+				if dec.Record()[i] == "" {
+					dec.Record()[i] = "Common"
+				}
+				if recordStruct.OtherData[dec.Record()[i]] == nil {
+					recordStruct.OtherData[dec.Record()[i]] = make(map[string]int)
+				}
+				recordStruct.OtherData[dec.Record()[i]][header[i]] = i
+			}
+		}
+		spew.Dump(recordStruct.OtherData)
 	}
 
+	//read csv records until EOF
+	count = 100
 	for {
 		if err := dec.Decode(&recordStruct); err == io.EOF {
 			break
