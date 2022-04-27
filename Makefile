@@ -4,7 +4,7 @@ COMMIT=$(shell git rev-parse --short HEAD)
 BRANCH=$(shell git rev-parse --abbrev-ref HEAD)
 TAG=$(shell git describe --tags |cut -d- -f1)
 
-LDFLAGS = -ldflags "-X main.gitTag=${TAG} -X main.gitCommit=${COMMIT} -X main.gitBranch=${BRANCH} -s -w"
+LDFLAGS = -ldflags "-X main.version=${TAG} -X main.gitCommit=${COMMIT} -X main.gitBranch=${BRANCH} -s -w"
 
 .PHONY: help clean dep build 
 

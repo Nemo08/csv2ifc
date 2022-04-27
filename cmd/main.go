@@ -15,10 +15,9 @@ import (
 )
 
 var (
-	inputCsvFile         = ""
-	outputIFCFile        = "out.ifc"
-	version              = "version unknown"
-	gitCommit, gitBranch string
+	inputCsvFile                  = ""
+	outputIFCFile                 = "out.ifc"
+	version, gitCommit, gitBranch string
 )
 
 type CsvRecord struct {
@@ -35,6 +34,7 @@ func main() {
 	// Add a flag
 	flaggy.String(&inputCsvFile, "c", "csv", "Input csv file")
 	flaggy.String(&outputIFCFile, "o", "out", "Output ifc file")
+	flaggy.SetVersion(version)
 
 	// Parse the flag
 	flaggy.Parse()
