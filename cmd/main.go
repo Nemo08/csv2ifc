@@ -17,7 +17,7 @@ import (
 var (
 	inputCsvFile         = ""
 	outputIFCFile        = "out.ifc"
-	version              = "unknown"
+	version              = "version unknown"
 	gitCommit, gitBranch string
 )
 
