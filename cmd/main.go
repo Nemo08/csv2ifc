@@ -117,6 +117,7 @@ func main() {
 			log.Fatal("Csv decoder error: ", err)
 			os.Exit(1)
 		}
+
 		for _, i := range dec.Unused() {
 			if (header[i] != "") && (dec.Record()[i] != "") {
 				if psetHeader[dec.Record()[i]] == nil {
@@ -124,6 +125,7 @@ func main() {
 				}
 				psetHeader[dec.Record()[i]][header[i]] = i
 			}
+
 			if (header[i] != "") && (emptyPset2Common) {
 				if dec.Record()[i] == "" {
 					dec.Record()[i] = "Common"
@@ -150,19 +152,20 @@ func main() {
 		//write Pset data
 		bproxy := count - 1
 
-		onePset := make(map[string]string)
 		for k, v := range psetHeader {
+			onePsetData := make(map[string]string)
 			for pk, pv := range v {
-				onePset[pk] = dec.Record()[pv]
+				onePsetData[pk] = dec.Record()[pv]
 			}
 
-			bPset, count = itl.OnePset(count, bproxy, k, onePset)
+			bPset, count = itl.OnePset(count, bproxy, k, onePsetData)
 			_, err = ifcFile.Write(bPset)
 			if err != nil {
 				log.Fatal(err)
 				os.Exit(1)
 			}
 		}
+
 	}
 
 	//write ifc relation
