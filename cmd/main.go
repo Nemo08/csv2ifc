@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/integrii/flaggy"
 	"github.com/jszwec/csvutil"
 
@@ -21,17 +20,19 @@ var (
 	emptyPset2Common              bool
 	psetPresent                   bool
 	version, gitCommit, gitBranch string
+	psetHeader                    map[string]map[string]int
+	onePset                       map[string]string
 )
 
 type CsvRecord struct {
-	X         string                    `csv:"x"`
-	Y         string                    `csv:"y"`
-	Z         string                    `csv:"z"`
-	Name      string                    `csv:"name,omitempty"`
-	IType     string                    `csv:"type,omitempty"`
-	Descr     string                    `csv:"description,omitempty"`
-	Tag       string                    `csv:"tag,omitempty"`
-	OtherData map[string]map[string]int `csv:"-"`
+	X         string                       `csv:"x"`
+	Y         string                       `csv:"y"`
+	Z         string                       `csv:"z"`
+	Name      string                       `csv:"name,omitempty"`
+	IType     string                       `csv:"type,omitempty"`
+	Descr     string                       `csv:"description,omitempty"`
+	Tag       string                       `csv:"tag,omitempty"`
+	OtherData map[string]map[string]string `csv:"-,omitempty"`
 }
 
 func main() {
@@ -91,7 +92,7 @@ func main() {
 	//read csv line and write to ifc file
 	var csvHeader []string //empty csvHeader for csvutils -> csvutils use first line as header
 	var count int32
-	var b []byte
+	var b, bPset []byte
 	var recordStruct CsvRecord
 	var shapes []string
 
@@ -109,7 +110,7 @@ func main() {
 
 	//read second string if present -p flag
 	if psetPresent {
-		recordStruct.OtherData = make(map[string]map[string]int)
+		psetHeader = make(map[string]map[string]int)
 		err = dec.Decode(&recordStruct)
 		header := dec.Header()
 		if err != nil {
@@ -118,33 +119,50 @@ func main() {
 		}
 		for _, i := range dec.Unused() {
 			if (header[i] != "") && (dec.Record()[i] != "") {
-				if recordStruct.OtherData[dec.Record()[i]] == nil {
-					recordStruct.OtherData[dec.Record()[i]] = make(map[string]int)
+				if psetHeader[dec.Record()[i]] == nil {
+					psetHeader[dec.Record()[i]] = make(map[string]int)
 				}
-				recordStruct.OtherData[dec.Record()[i]][header[i]] = i
+				psetHeader[dec.Record()[i]][header[i]] = i
 			}
 			if (header[i] != "") && (emptyPset2Common) {
 				if dec.Record()[i] == "" {
 					dec.Record()[i] = "Common"
 				}
-				if recordStruct.OtherData[dec.Record()[i]] == nil {
-					recordStruct.OtherData[dec.Record()[i]] = make(map[string]int)
+				if psetHeader[dec.Record()[i]] == nil {
+					psetHeader[dec.Record()[i]] = make(map[string]int)
 				}
-				recordStruct.OtherData[dec.Record()[i]][header[i]] = i
+				psetHeader[dec.Record()[i]][header[i]] = i
 			}
 		}
-		spew.Dump(recordStruct.OtherData)
 	}
 
 	//read csv records until EOF
 	count = 100
 	for {
+		//write point data
 		if err := dec.Decode(&recordStruct); err == io.EOF {
 			break
 		}
 		shapes = append(shapes, "#"+fmt.Sprint(count+6))
 		b, count = itl.OneRecord(count, recordStruct.X, recordStruct.Y, recordStruct.Z, recordStruct.Name, recordStruct.IType, recordStruct.Descr, recordStruct.Tag)
 		_, err = ifcFile.Write(b)
+
+		//write Pset data
+		bproxy := count - 1
+
+		onePset := make(map[string]string)
+		for k, v := range psetHeader {
+			for pk, pv := range v {
+				onePset[pk] = dec.Record()[pv]
+			}
+
+			bPset, count = itl.OnePset(count, bproxy, k, onePset)
+			_, err = ifcFile.Write(bPset)
+			if err != nil {
+				log.Fatal(err)
+				os.Exit(1)
+			}
+		}
 	}
 
 	//write ifc relation
