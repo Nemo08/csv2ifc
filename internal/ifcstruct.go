@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"strings"
 )
 
 var (
@@ -80,4 +81,31 @@ func OneRecord(counter int32, x, y, z, name, itype, descr, tag string) ([]byte, 
 
 `
 	return []byte(b), counter + 7
+}
+
+func OnePset(counter int32, linkTo int32, name string, props map[string]string) ([]byte, int32) {
+	var str string
+	var nums []string
+
+	xName, _ := Encode2HexString(name)
+	nums = make([]string, 0)
+	counter++
+
+	for k, v := range props {
+		xKey, _ := Encode2HexString(k)
+		xValue, _ := Encode2HexString(v)
+		str = str + "#" + fmt.Sprint(counter) + "= IFCPROPERTYSINGLEVALUE('" + xKey + "',$,IFCLABEL('" + xValue + "'),$);\n"
+		nums = append(nums, "#"+fmt.Sprint(counter))
+		counter++
+	}
+
+	guid, _ := NewIFCGUID()
+	guid2, _ := NewIFCGUID()
+	str = str + "#" + fmt.Sprint(counter+1) + "= IFCRELDEFINESBYPROPERTIES('" + string(guid) + "',$,$,$,(#" + fmt.Sprint(linkTo) + "),#" + fmt.Sprint(counter+2) + ");\n"
+	str = str + "#" + fmt.Sprint(counter+2) + "= IFCPROPERTYSET('" + string(guid2) + "',$,'Pset_" + xName + "',$,(" + strings.Join(nums, ",") + "));\n"
+	counter += 2
+	str = str + "\n"
+
+	counter++
+	return []byte(str), counter
 }
