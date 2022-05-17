@@ -102,7 +102,7 @@ func OnePset(counter int32, linkTo int32, name string, props map[string]string) 
 	guid, _ := NewIFCGUID()
 	guid2, _ := NewIFCGUID()
 	str = str + "#" + fmt.Sprint(counter+1) + "= IFCRELDEFINESBYPROPERTIES('" + string(guid) + "',$,$,$,(#" + fmt.Sprint(linkTo) + "),#" + fmt.Sprint(counter+2) + ");\n"
-	str = str + "#" + fmt.Sprint(counter+2) + "= IFCPROPERTYSET('" + string(guid2) + "',$,'Pset_" + xName + "',$,(" + strings.Join(nums, ",") + "));\n"
+	str = str + "#" + fmt.Sprint(counter+2) + "= IFCPROPERTYSET('" + string(guid2) + "',$,'" + xName + "',$,(" + strings.Join(nums, ",") + "));\n"
 	counter += 2
 	str = str + "\n"
 

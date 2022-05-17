@@ -11,7 +11,7 @@ Using: csv2ifc -c data.csv -o ifcdata.ifc
 
 ## Psets
 
-If -p flag set, not-empty data from second line of CSV file interpret as Pset name and data from this column add to IFC file to pset Pset_NAME and property name from first line, except required and optional fields. 
+If -p flag set, not-empty data from second line of CSV file interpret as Pset name and data from this column add to IFC file to pset NAME and property name from first line, except required and optional fields. 
 
 If setted -p and -e flag then all non-empty fields from first line, except required and optional fields, add to Pset_Common if second line is empty.
 
