@@ -11,7 +11,7 @@ ISO-10303-21;
 HEADER;
 FILE_DESCRIPTION(('ViewDefinition[DesignTransferView]'), '2;1');
 FILE_NAME('I:/pt_optimized.ifc','2022-04-26T13:10:55',(),(), '3.6..25428', 'Windows', 'Nobody');
-FILE_SCHEMA(('IFC2X3'));
+FILE_SCHEMA(('IFC4X1'));
 ENDSEC;
 DATA;
 #1= IFCAPPLICATION(#7,'0.0.220130','CSV2IFC','CSV2IFC');
@@ -77,7 +77,7 @@ func OneRecord(counter int32, x, y, z, name, itype, descr, tag string) ([]byte, 
 #` + fmt.Sprint(counter+3) + `= IFCLOCALPLACEMENT(#5,#` + fmt.Sprint(counter+5) + `);
 #` + fmt.Sprint(counter+4) + `= IFCSHAPEREPRESENTATION(#9,'Body','Brep',(#80));
 #` + fmt.Sprint(counter+5) + `= IFCAXIS2PLACEMENT3D(#` + fmt.Sprint(counter+1) + `,#4,#3);
-#` + fmt.Sprint(counter+6) + `= IFCBUILDINGELEMENTPROXY('` + string(guid) + `',$,'` + name + `','` + descr + `','` + itype + `',#` + fmt.Sprint(counter+3) + `,#` + fmt.Sprint(counter+2) + `,'` + tag + `',$);
+#` + fmt.Sprint(counter+6) + `= IFCGEOGRAPHICELEMENT('` + string(guid) + `',$,'` + name + `','` + descr + `','` + itype + `',#` + fmt.Sprint(counter+3) + `,#` + fmt.Sprint(counter+2) + `,'` + tag + `',$);
 
 `
 	return []byte(b), counter + 7
