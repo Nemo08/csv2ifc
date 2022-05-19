@@ -83,8 +83,8 @@ func OneRecord(counter int32, x, y, z, name, itype, descr, tag string) ([]byte, 
 	return []byte(b), counter + 7
 }
 
-func OnePset(counter int32, linkTo int32, name string, props map[string]string) ([]byte, int32) {
-	var str string
+func OnePset(counter int32, linkTo int32, name string, props map[string]PsetValue) ([]byte, int32) {
+	var str, quote string
 	var nums []string
 
 	xName, _ := Encode2HexString(name)
@@ -92,9 +92,16 @@ func OnePset(counter int32, linkTo int32, name string, props map[string]string) 
 	counter++
 
 	for k, v := range props {
+		quote = "'"
 		xKey, _ := Encode2HexString(k)
-		xValue, _ := Encode2HexString(v)
-		str = str + "#" + fmt.Sprint(counter) + "= IFCPROPERTYSINGLEVALUE('" + xKey + "',$,IFCLABEL('" + xValue + "'),$);\n"
+		xValue, _ := Encode2HexString(v.Value)
+
+		//check, if in ValueType exist "~", then print value without quotes and remove "~" from ValueType
+		if strings.Contains(v.ValueTypeDefinition, "~") {
+			quote = ""
+			v.ValueTypeDefinition = strings.ReplaceAll(v.ValueTypeDefinition, "~", "")
+		}
+		str = str + "#" + fmt.Sprint(counter) + "= IFCPROPERTYSINGLEVALUE('" + xKey + "',$," + v.ValueTypeDefinition + "(" + quote + xValue + quote + "),$);\n"
 		nums = append(nums, "#"+fmt.Sprint(counter))
 		counter++
 	}
