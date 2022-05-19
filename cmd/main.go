@@ -14,13 +14,19 @@ import (
 	itl "csv2ifc/internal"
 )
 
+const (
+	defaultNameForEmptyPset = "Common"
+	defaultNameForEmptyType = "IFCLABEL"
+)
+
 var (
 	inputCsvFile                  = ""
 	outputIFCFile                 = "out.ifc"
 	emptyPset2Common              bool
 	psetPresent                   bool
+	psetUseTypes                  bool
 	version, gitCommit, gitBranch string
-	psetHeader                    map[string]map[string]int
+	psetHeader                    map[string]map[string]itl.PsetValue
 	onePset                       map[string]string
 )
 
@@ -43,6 +49,7 @@ func main() {
 	           except required and optional fields (x,y,z,name,type,description,tag)`)
 	flaggy.Bool(&emptyPset2Common, "e", "empty", `Work with setted pset flag, create pset 'Pset_Common' for all not empty fields in header,
 	           except required and optional fields (x,y,z,name,type,description,tag)`)
+	flaggy.Bool(&psetUseTypes, "t", "types", `Work with setted pset flag, get type of property from third line`)
 	flaggy.SetVersion(version)
 
 	// Parse the flag
@@ -110,30 +117,45 @@ func main() {
 
 	//read second string if present -p flag
 	if psetPresent {
-		psetHeader = make(map[string]map[string]int)
+		psetHeader = make(map[string]map[string]itl.PsetValue)
 		err = dec.Decode(&recordStruct)
-		header := dec.Header()
 		if err != nil {
 			log.Fatal("Csv decoder error: ", err)
 			os.Exit(1)
 		}
+		var psetNamesLineRecords, typesLineRecords []string
+		header := dec.Header()
+		psetNamesLineRecords = dec.Record()
+
+		//read third line with types if -t flag present for ValueTypeDefinition
+		if psetUseTypes {
+			err = dec.Decode(&recordStruct)
+			if err != nil {
+				log.Fatal("Csv decoder error: ", err)
+				os.Exit(1)
+			}
+			typesLineRecords = dec.Record()
+		}
 
 		for _, i := range dec.Unused() {
-			if (header[i] != "") && (dec.Record()[i] != "") {
-				if psetHeader[dec.Record()[i]] == nil {
-					psetHeader[dec.Record()[i]] = make(map[string]int)
+			if header[i] != "" {
+				if (psetNamesLineRecords[i] == "") && (emptyPset2Common) {
+					psetNamesLineRecords[i] = defaultNameForEmptyPset
 				}
-				psetHeader[dec.Record()[i]][header[i]] = i
-			}
+				if psetNamesLineRecords[i] == "" {
+					break
+				}
+				if psetHeader[psetNamesLineRecords[i]] == nil {
+					psetHeader[psetNamesLineRecords[i]] = make(map[string]itl.PsetValue)
+				}
+				var pv itl.PsetValue
+				pv.Column = i
 
-			if (header[i] != "") && (emptyPset2Common) {
-				if dec.Record()[i] == "" {
-					dec.Record()[i] = "Common"
+				if psetUseTypes {
+					pv.ValueTypeDefinition = typesLineRecords[i]
 				}
-				if psetHeader[dec.Record()[i]] == nil {
-					psetHeader[dec.Record()[i]] = make(map[string]int)
-				}
-				psetHeader[dec.Record()[i]][header[i]] = i
+
+				psetHeader[psetNamesLineRecords[i]][header[i]] = pv
 			}
 		}
 	}
@@ -145,17 +167,30 @@ func main() {
 		if err := dec.Decode(&recordStruct); err == io.EOF {
 			break
 		}
+
+		if err != nil {
+			log.Fatal("Csv decoder error: ", err)
+			os.Exit(1)
+		}
+
 		shapes = append(shapes, "#"+fmt.Sprint(count+6))
 		b, count = itl.OneRecord(count, recordStruct.X, recordStruct.Y, recordStruct.Z, recordStruct.Name, recordStruct.IType, recordStruct.Descr, recordStruct.Tag)
 		_, err = ifcFile.Write(b)
 
 		//write Pset data
 		bproxy := count - 1
+		var pt itl.PsetValue
 
 		for k, v := range psetHeader {
-			onePsetData := make(map[string]string)
+			onePsetData := make(map[string]itl.PsetValue)
 			for pk, pv := range v {
-				onePsetData[pk] = dec.Record()[pv]
+				pt.Value = dec.Record()[pv.Column]
+				if pv.ValueTypeDefinition != "" {
+					pt.ValueTypeDefinition = pv.ValueTypeDefinition
+				} else {
+					pt.ValueTypeDefinition = defaultNameForEmptyType
+				}
+				onePsetData[pk] = pt
 			}
 
 			bPset, count = itl.OnePset(count, bproxy, k, onePsetData)
