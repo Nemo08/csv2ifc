@@ -3,6 +3,7 @@ package internal
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -15,7 +16,7 @@ func Encode2HexString(in string) (out string, err error) {
 	var a string
 	for _, rv := range in {
 		if int(rv) > 126 {
-			a = a + `\X2\` + fmt.Sprintf("%04s", strconv.FormatInt(int64(rv), 16)) + `\X0\`
+			a = a + `\X2\` + strings.ToUpper(fmt.Sprintf("%04s", strconv.FormatInt(int64(rv), 16))) + `\X0\`
 		} else {
 			a = a + string(rv)
 		}
